@@ -36,6 +36,12 @@ jobs:
         shell: bash
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        with:
+          platforms: arm64
+          cache-image: false
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
         with:
@@ -54,7 +60,7 @@ jobs:
         with:
           context: .
           target: production
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.IMAGE }}:sha-${{ steps.source.outputs.sha }}
           build-args: |
@@ -71,7 +77,7 @@ jobs:
         run: |
           {
             printf 'Source: `everlastingcrown/paperclip@%s`\n\n' "$SOURCE_SHA"
-            printf 'Platform: `linux/amd64`\n\n'
+            printf 'Platforms: `linux/amd64`, `linux/arm64`\n\n'
             printf 'Image: `%s:sha-%s`\n\n' "$IMAGE" "$SOURCE_SHA"
             printf 'Digest: `%s`\n\n' "$DIGEST"
             printf 'Pull: `docker pull %s@%s`\n' "$IMAGE" "$DIGEST"

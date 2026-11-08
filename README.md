@@ -2,7 +2,8 @@
 
 Manual GitHub Actions builder for the public
 [`everlastingcrown/paperclip`](https://github.com/everlastingcrown/paperclip) fork.
-Builds its Dockerfile's `production` target for `linux/amd64` and publishes:
+Builds its Dockerfile's `production` target for `linux/amd64` and `linux/arm64`
+and publishes one multi-platform image tag:
 
 ```text
 ghcr.io/everlastingcrown/paperclip-backport:sha-<full-source-sha>
@@ -27,7 +28,8 @@ gh workflow run build.yml --repo everlastingcrown/paperclip-backport-images \
 
 Only manual dispatch starts builds. Commits and pull requests do not. A new run
 cancels the previous build, and each job has a 45-minute timeout. There is no
-multi-platform matrix or persistent build cache.
+build matrix or persistent build cache. Buildx builds both platforms in one job,
+using QEMU for ARM64 emulation on the AMD64 runner.
 
 Checkout needs no extra secret for this public fork. Publishing uses this
 repository's `GITHUB_TOKEN` with `contents: read` and `packages: write`. The OCI
@@ -37,19 +39,23 @@ source fork would require a separate, narrowly scoped read credential.
 
 ## Pull and verify
 
-Copy the digest from the run summary. On an amd64 Docker host:
+Copy the image index digest from the run summary. Verify that both platforms are
+present, then pull and run on an AMD64 or ARM64 Docker host:
 
 ```sh
 IMAGE=ghcr.io/everlastingcrown/paperclip-backport@sha256:<digest>
+docker buildx imagetools inspect "$IMAGE"
 docker pull "$IMAGE"
 docker image inspect "$IMAGE" --format '{{.Os}}/{{.Architecture}} {{index .Config.Labels "org.opencontainers.image.revision"}}'
 docker run --rm -p 3100:3100 "$IMAGE"
 ```
 
-Confirm `linux/amd64`, the expected full source SHA, and successful startup in the
+Confirm the index includes `linux/amd64` and `linux/arm64`. Docker selects the
+host architecture when pulling. Repeat the pull/run check on each architecture,
+confirming the expected platform, full source SHA, and successful startup in the
 container logs. Open `http://localhost:3100` to check the application. This is a
 temporary smoke test; use the deployment's normal volumes and configuration for
-production. Pulling by digest selects the exact published image, even if a SHA
+production. Pulling by digest selects the exact published image index, even if a SHA
 tag is rebuilt. Source-SHA tags identify source revisions, not reproducible image
 contents: the source Dockerfile also downloads dependencies and CLI tools.
 
