@@ -7,10 +7,10 @@ Use this repository as an independent, manual GitHub Actions builder. Leave Acti
 - Confirmed source: `everlastingcrown/paperclip`, intended branch `backport/v2026.1106.0-app-bridge`, build architectures `linux/amd64` and `linux/arm64`.
 - Add `.github/workflows/build.yml` on this repository's default branch with only `workflow_dispatch`. Fix the source repository in the workflow and accept a branch, tag, or commit SHA input. Prefer an exact SHA for repeatable builds.
 - Check out that source using `actions/checkout` with `repository`, `ref`, and `persist-credentials: false`. Public source needs no extra secret. Private source needs a narrowly scoped read credential; this builder's `GITHUB_TOKEN` cannot read another private repository.
-- Build with explicit `context: .` and `target: production`, confirming that target and any required build arguments exist in the backport Dockerfile. Use one standard Linux runner with QEMU ARM64 emulation configured before Buildx; publish both architectures under one multi-platform image tag.
-- Resolve the source SHA with `git rev-parse HEAD`; use it for image tags, the OCI revision label, and supported build-commit arguments. `github.sha` identifies the builder repository commit, not the source commit.
+- Build with explicit `context: .` and `target: production`, confirming that target and any required build arguments exist in the backport Dockerfile. Use separate native AMD64 and ARM64 matrix jobs (`ubuntu-24.04` and `ubuntu-24.04-arm`). Push each image by digest and pass digests through artifacts to a final job that publishes the combined multi-platform image tag.
+- Resolve the source SHA once in a prerequisite job with `git rev-parse HEAD` and check out that exact SHA in both build jobs; use it for image tags, the OCI revision label, and supported build-commit arguments. `github.sha` identifies the builder repository commit, not the source commit.
 - Publish `ghcr.io/everlastingcrown/paperclip-backport:sha-<full-source-sha>`, optionally also tagging `backport`. Use this repository's `GITHUB_TOKEN` with only `contents: read` and `packages: write`. Associate the package with this builder repository.
-- Pin actions to reviewed full commit SHAs. Set a 45-minute timeout and a fixed concurrency group with `cancel-in-progress: true`. Build trusted source revisions only. Keep push, PR, schedule, release, and deployment triggers absent.
+- Pin actions to reviewed full commit SHAs. Set a 45-minute build timeout (5 minutes for source resolution, 15 minutes for publishing) and a fixed concurrency group with `cancel-in-progress: true`. Build trusted source revisions only. Keep push, PR, schedule, release, and deployment triggers absent.
 
 ## Acceptance and usage
 

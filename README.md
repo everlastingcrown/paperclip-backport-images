@@ -27,9 +27,12 @@ gh workflow run build.yml --repo everlastingcrown/paperclip-backport-images \
 ```
 
 Only manual dispatch starts builds. Commits and pull requests do not. A new run
-cancels the previous build, and each job has a 45-minute timeout. There is no
-build matrix or persistent build cache. Buildx builds both platforms in one job,
-using QEMU for ARM64 emulation on the AMD64 runner.
+cancels the previous run. The source commit is resolved once, then separate matrix
+jobs build on native `ubuntu-24.04` (AMD64) and `ubuntu-24.04-arm` (ARM64) runners,
+each with a 45-minute timeout. Both jobs push images by digest; a final job
+combines their exact digests into the source-SHA tag after both builds succeed.
+Source resolution and publishing have 5- and 15-minute timeouts respectively.
+There is no persistent build cache.
 
 Checkout needs no extra secret for this public fork. Publishing uses this
 repository's `GITHUB_TOKEN` with `contents: read` and `packages: write`. The OCI
